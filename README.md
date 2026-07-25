@@ -1,4 +1,4 @@
-# @immediately-run/transpiler
+# @lofcz/transpiler
 
 The single source of truth for immediately.run's **per-file transform chain** —
 Babel (with `react-refresh/babel` + explicit-resource-management) followed by the
@@ -25,7 +25,7 @@ import {
   TRANSPILER_VERSION,    // the stamp (package version, baked at build)
   PRESET_NAME,           // 'react' (v1 covers the react preset only)
   isTransformable,       // which extensions this package owns
-} from '@immediately-run/transpiler';
+} from '@lofcz/transpiler';
 ```
 
 `transformFile({ path, code })` picks the chain variant from the path, exactly as
