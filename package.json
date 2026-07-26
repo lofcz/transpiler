@@ -3,7 +3,10 @@
   "version": "0.8.0",
   "description": "The single source of truth for immediately.run's per-file transform chain (MDX + Babel + react-refresh), shared byte-for-byte between the browser sandbox bundler and the CLI's pre-transpiled-artifact emitter.",
   "license": "MIT",
-  "repository": "github:lofcz/transpiler",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lofcz/transpiler.git"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -63,6 +66,7 @@
     "node": ">=18"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "provenance": true
   }
 }
