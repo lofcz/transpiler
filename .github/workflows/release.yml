@@ -68,22 +68,10 @@ jobs:
           git commit -m "chore: release v${{ steps.version.outputs.version }}"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
 
-      # One-time bootstrap: npm OIDC trusted publishing can only be configured for
-      # a package that ALREADY exists on the registry (npm has no "pending
-      # publisher"). So the very first publish of @lofcz/transpiler uses a granular
-      # npm token stored in the NPM_BOOTSTRAP_TOKEN repo secret. After this first
-      # publish succeeds, configure the trusted publisher on npmjs.com
-      # (Settings → Trusted Publisher → GitHub Actions: owner lofcz, repo
-      # transpiler, workflow release.yml) and DELETE the NPM_BOOTSTRAP_TOKEN
-      # secret — every later publish then uses pure OIDC (the step below).
-      - name: Bootstrap first publish (token)
-        if: ${{ secrets.NPM_BOOTSTRAP_TOKEN != '' }}
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
-        run: npm publish --access public
-
+      # The first publish was done manually (npm trusted publishing can only be
+      # configured for a package that already exists). All releases now run on
+      # pure OIDC provenance.
       - name: Publish to npm
-        if: ${{ secrets.NPM_BOOTSTRAP_TOKEN == '' }}
         run: npm publish --provenance --access public
 
       - name: Push release commit and tag
