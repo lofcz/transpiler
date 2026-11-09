@@ -1,5 +1,88 @@
 import { augmentDependencies } from './presets/react';
 import { isBuildDep } from './presets/build-dep';
+export function computeDeclaredDepMap(
+  pkgDependencies: DepMap,
+  registryResolved: readonly string[] = [],
+): DepMap {
+  const skip = new Set([...SELF_HOSTED_MODULES, ...registryResolved]);
+  const selfHosted: DepMap = {};
+  for (const [name, range] of Object.entries(pkgDependencies)) {
+    if (!skip.has(name)) selfHosted[name] = range;
+  }
+  const augmented = augmentDependencies(selfHosted);
+  const declared: DepMap = {};
+  for (const [name, range] of Object.entries(augmented)) {
+    if (!skip.has(name)) declared[name] = range;
+  }
+  return sortDepMap(declared);
+}
+
+// Deps the preset's own runtime code requires (the react-refresh helper, the
+// self-hosted SDK, Babel's core-js injection) — invisible to an import scan of
+// app sources, so always requested rather than discovered one round trip late.
+const IMPLICIT_DEPENDENCIES = Object.keys(augmentDependencies({}));
+
+/**
+ * The packages to resolve from the CDN: the declared packages the app imports,
+ * plus the preset's implicit deps. A declared package nothing imports (bundlers,
+ * Babel plugins, linters, `@types/*`) is never fetched; an imported package that
+ * isn't declared has no version source and is left to fail at resolution.
+ * `imported` holds package names (`importedPackages`); `implicit` defaults to
+ * the react preset's (the sandbox passes its active preset's).
+ */
+export function computeRequestDepMap(
+  declared: DepMap,
+  imported: Iterable<string>,
+  implicit: readonly string[] = IMPLICIT_DEPENDENCIES,
+): DepMap {
+  const request: DepMap = {};
+  for (const name of [...implicit, ...imported]) {
+    if (Object.prototype.hasOwnProperty.call(declared, name)) request[name] = declared[name];
+  }
+  return sortDepMap(request);
+}
+
+// npm's package-name grammar (validate-npm-package-name), case-insensitive so
+// legacy mixed-case names still count.
+const PACKAGE_NAME_RE = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
+
+/**
+ * The package a module specifier loads from `node_modules`: `lodash/fp` →
+ * `lodash`, `@scope/pkg/sub` → `@scope/pkg`. Null for anything that can't be a
+ * package import — relative and absolute paths, `#subpath` imports, schemes
+ * (`node:`, `https:`, `data:`), the dep collector's non-literal `undefined`.
+ * Local aliases that look bare (`@/x`, tsconfig `paths`) may still yield a name;
+ * that is harmless because only declared names are ever requested.
+ */
+export function packageName(specifier: unknown): string | null {
+  if (typeof specifier !== 'string' || specifier === '') return null;
+  if (/^[./#]/.test(specifier) || specifier.includes(':')) return null;
+  const segments = specifier.split('/');
+  const name = specifier.startsWith('@') ? segments.slice(0, 2).join('/') : segments[0];
+  return PACKAGE_NAME_RE.test(name) ? name : null;
+}
+
+/**
+ * The package entry a module specifier imports: `react` → `.`,
+ * `react-dom/client` → `./client`, `@scope/pkg/a/b` → `./a/b`. Null when the
+ * specifier is not a package import (`packageName`).
+ */
+export function packageEntry(specifier: unknown): string | null {
+  const name = packageName(specifier);
+  if (name === null) return null;
+  const subpath = (specifier as string).slice(name.length).replace(/^\/+|\/+$/g, '');
+  return subpath ? `./${subpath}` : '.';
+}
+
+/** The set of package names a list of module specifiers imports. */
+export function importedPackages(specifiers: Iterable<unknown>): Set<string> {
+  const names = new Set<string>();
+  for (const specifier of specifiers) {
+    const name = packageName(specifier);
+    if (name) names.add(name);
+  }
+  return names;
+}
 
 // dependency name => version range, same shape the runtime uses.
 export type DepMap = Record<string, string>;
