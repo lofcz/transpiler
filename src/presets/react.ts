@@ -21,10 +21,7 @@ import type { DepMap } from '../depmap';
 /** Babel config for app-root files that receive HMR instrumentation. */
 export const REACT_REFRESH_BABEL_CONFIG = {
   presets: [['react', { runtime: 'automatic' }]],
-  plugins: [
-    ['react-refresh/babel', { skipEnvCheck: true }],
-    '@babel/plugin-proposal-explicit-resource-management',
-  ],
+  plugins: [['react-refresh/babel', { skipEnvCheck: true }]],
 };
 
 /** Babel config for the non-app-root / non-refresh variant (`.ts`, node_modules). */
@@ -77,8 +74,8 @@ export function selectReactChain(filepath: string): ReactChain | null {
 /**
  * The react preset's dependency augmentation, moved verbatim from
  * `ReactPreset.augmentDependencies`. The CLI needs this to compute the same
- * input DepMap the runtime resolves (`computeInputDepMap`). Mutates and returns
- * the passed map, matching the sandbox.
+ * declared DepMap the runtime resolves against (`computeDeclaredDepMap`).
+ * Mutates and returns the passed map, matching the sandbox.
  */
 export function augmentDependencies(dependencies: DepMap): DepMap {
   if (!dependencies['react-refresh']) {
@@ -88,4 +85,4 @@ export function augmentDependencies(dependencies: DepMap): DepMap {
   dependencies['core-js'] = '3.51.0';
   dependencies['react-error-boundary'] = '^6.1.6';
   return dependencies;
-}
+}
